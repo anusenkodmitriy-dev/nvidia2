@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Rust: Ночное зрение и гайды | Полное руководство</title>
+    <meta name="description" content="Как видеть ночью в Rust легально: настройки графики, фильтры NVIDIA Freestyle, использование ПНВ и секреты выживания на острове.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0a0c10;
+            font-family: 'Inter', sans-serif;
+            color: #ecedee;
+            line-height: 1.5;
+        }
+
+        /* градиентный фон с текстурой шума */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(#2a2e3a 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.2;
+            pointer-events: none;
+            z-index: -2;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, rgba(30, 40, 30, 0.3), #0a0c10 80%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 5rem;
+        }
+
+        /* хлебные крошки / мета */
+        .meta-badge {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .badge {
+            background: rgba(50, 185, 90, 0.18);
+            backdrop-filter: blur(2px);
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            border-left: 2px solid #3cba54;
+            color: #b3ffcf;
+        }
+
+        .date {
+            color: #8e94a2;
+            font-size: 0.85rem;
+        }
+
+        /* основной заголовок */
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #f5f7fa 0%, #b0ffcf 80%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            color: #b4bac8;
+            border-left: 4px solid #3cba54;
+            padding-left: 1.5rem;
+            margin-bottom: 2.5rem;
+            font-weight: 400;
+        }
+
+        /* карточки секций */
+        .card {
+            background: rgba(18, 22, 28, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            border: 1px solid rgba(60, 186, 84, 0.25);
+            padding: 1.8rem 2rem;
+            margin-bottom: 2.5rem;
+            transition: 0.2s;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+
+        .card:hover {
+            border-color: rgba(60, 186, 84, 0.6);
+            background: rgba(22, 27, 34, 0.8);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h2 span {
+            font-size: 2rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #c8ffe0;
+        }
+
+        .warning-box {
+            background: rgba(255, 100, 70, 0.12);
+            border-left: 6px solid #ff5e4a;
+            padding: 1.2rem 1.8rem;
+            border-radius: 1.2rem;
+            margin: 1.5rem 0;
+        }
+
+        .success-box {
+            background: rgba(60, 186, 84, 0.12);
+            border-left: 6px solid #3cba54;
+            padding: 1.2rem 1.8rem;
+            border-radius: 1.2rem;
+            margin: 1.5rem 0;
+        }
+
+        .code-block {
+            background: #0e1117;
+            border-radius: 1.2rem;
+            padding: 1.2rem 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            border: 1px solid #2a2f3a;
+            margin: 1.2rem 0;
+            color: #b9ffcf;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin: 1.2rem 0;
+        }
+
+        .setting-item {
+            background: #0f1219;
+            border-radius: 1rem;
+            padding: 0.8rem 1.2rem;
+            border: 1px solid #262c36;
+        }
+
+        .setting-name {
+            font-weight: 700;
+            color: #3cba54;
+        }
+
+        .value {
+            font-family: monospace;
+            font-weight: 500;
+            background: #1a1f29;
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            margin-top: 6px;
+            font-size: 0.8rem;
+        }
+
+        hr {
+            margin: 2rem 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, #2a2f3a, #3cba54, #2a2f3a);
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 2rem 1rem;
+            background: rgba(0,0,0,0.4);
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            color: #9aa2b5;
+        }
+
+        button.copy-btn {
+            background: #1f2a2f;
+            border: 1px solid #3cba54;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #c0ffd0;
+            cursor: pointer;
+            transition: 0.1s;
+            margin-left: 1rem;
+        }
+
+        button.copy-btn:hover {
+            background: #2c3a32;
+        }
+
+        @media (max-width: 680px) {
+            .container {
+                padding: 1rem 1rem 3rem;
+            }
+            h1 {
+                font-size: 2.2rem;
+            }
+            .card {
+                padding: 1.2rem 1.2rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="meta-badge">
+            <div class="badge">🍀 ГАЙД RUST 🍀</div>
+            <div class="badge">🏆 НОЧНОЕ ЗРЕНИЕ</div>
+            <div class="badge">🎮 АВТОВЫДАЧА</div>
+            <div class="date">📅 Обновлено: апрель 2026 | проверено на EAC</div>
+        </div>
+
+        <h1>Как видеть ночью в Rust <br> лут, ПвП и выживание в темноте</h1>
+        <div class="lead">
+            🍀 Ночь — не приговор. Настройки, NVIDIA Freestyle, приборы ночного видения и фишки, которые 
+            превращают тьму в твое главное преимущество. Всё легально, без риска бана.
+        </div>
+
+        <!-- КАРТОЧКА 1: почему ночь сложная -->
+        <div class="card">
+            <h2><span>🌑</span> Почему ночью ничего не видно?</h2>
+            <p>Разработчики Facepunch создали атмосферу реального выживания: плотный мрак, отсутствие лунного света в пасмурные ночи, густые тени. <strong>НО</strong> опытные игроки знают: темноту можно "победить" штатными методами, не используя читы. Мы разберем все легальные способы улучшить видимость.</p>
+            <div class="warning-box">
+                ⚠️ <strong>Важное предупреждение:</strong> Любые сторонние программы, удаляющие туман, делающие текстуры прозрачными или использующие инжекторы — банят EAC (Easy Anti-Cheat). Мы говорим только о <strong>безопасных</strong> методах: настройках драйверов, внутриигровых опциях и инвентаре.
+            </div>
+        </div>
+
+        <!-- КАРТОЧКА 2: НАСТРОЙКИ ГРАФИКИ -->
+        <div class="card">
+            <h2><span>🖥️</span> Шаг 1: Секретные настройки графики (F2)</h2>
+            <p>Даже на слабых ПК можно добиться контрастной картинки. Зайди в меню <strong>F2 → Графика</strong> и выставь следующие параметры:</p>
+            <div class="settings-grid">
+                <div class="setting-item"><span class="setting-name">🌿 Качество травы</span><div class="value">0 (ноль)</div><small>Убирает высокую траву — враги не смогут в ней спрятаться.</small></div>
+                <div class="setting-item"><span class="setting-name">🌀 Деформация травы</span><div class="value">ВКЛЮЧЕНО</div><small>Трава приминается, видно следы лежачих игроков.</small></div>
+                <div class="setting-item"><span class="setting-name">🌓 Макс. кол-во теней</span><div class="value">0 или 1</div><small>Убирает черные "слепые зоны" внутри баз и пещер.</small></div>
+                <div class="setting-item"><span class="setting-name">✨ Режим сглаживания</span><div class="value">FXAA</div><small>TAA / SMAA размывают движение — ночью силуэт не заметишь.</small></div>
+                <div class="setting-item"><span class="setting-name">🎯 Глубина резкости</span><div class="value">ВЫКЛ</div><small>Размытие фона мешает в бою.</small></div>
+                <div class="setting-item"><span class="setting-name">🔲 Параллакс отображения</span><div class="value">ВЫКЛ</div><small>Прирост FPS + четкие текстуры.</small></div>
+            </div>
+            <p>💡 <strong>Совет:</strong> Выключи "Лучи объемного света" — они создают ореолы вокруг источников и мешают различать детали в сумерках.</p>
+        </div>
+
+        <!-- КАРТОЧКА 3: NVIDIA FREESTYLE (АВТОВЫДАЧА ВИДИМОСТИ) -->
+        <div class="card">
+            <h2><span>🎨</span> Шаг 2: Фильтры NVIDIA — "инвидиа" легально</h2>
+            <p>Если у тебя видеокарта GeForce GTX 10 серии или новее — используй <strong>NVIDIA Freestyle (Alt+F3)</strong>. Это не чит, а официальная функция GeForce Experience. Накладывает поверх игры фильтры, делая ночь серой и читаемой.</p>
+            <div class="success-box">
+                ✅ <strong>Как настроить (пошагово):</strong><br>
+                1. Установи GeForce Experience и обнови драйверы.<br>
+                2. Запусти Rust, нажми <strong>Alt+F3</strong>.<br>
+                3. Нажми «Добавить фильтр» → «Яркость/Контрастность».<br>
+                4. Выставь значения: <strong>Яркость 65%</strong>, <strong>Контрастность 45%</strong>, <strong>Экспозиция -15%</strong>.<br>
+                5. Добавь фильтр «Детали»: <strong>Четкость 50%</strong>, <strong>Осветление теней +20%</strong>.<br>
+                6. Наслаждайся: силуэты видны даже в кустах!
+            </div>
+            <div class="code-block">
+                // Пример профиля для Rust (можно сохранить в Freestyle)
+                Фильтр 1: Яркость/Контрастность -> Ярк:68% | Контр:42% | Экспоз:-12%
+                Фильтр 2: Детали -> Четкость:55% | Сглаживание:15% | Осветление теней:25%
+            </div>
+            <p>⚠️ <strong>Важно:</strong> Не перекручивай яркость до 100% — получишь белую пелену и усталость глаз. Оптимальный баланс делает игру комфортной и ночью, и в подземельях.</p>
+        </div>
+
+        <!-- КАРТОЧКА 4: ПНВ и ИГРОВЫЕ ПРЕДМЕТЫ -->
+        <div class="card">
+            <h2><span>🔦</span> Шаг 3: Прибор ночного видения (ПНВ) и тактика</h2>
+            <p>В ванильном Rust есть полноценный <strong>Прибор ночного видения (NVG)</strong> — крафтится на Tier 2 верстаке или выпадает из элитных ящиков и вертолета.</p>
+            <h3>🔹 Как использовать ПНВ с умом:</h3>
+            <ul style="margin-left: 1.6rem; margin-bottom: 1rem;">
+                <li>➕ <strong>Плюсы:</strong> Включает зеленый монохром, позволяет видеть игроков в полной темноте.</li>
+                <li>➖ <strong>Минусы:</strong> Радиус обзора ограничен ~100 метров, не видно через дым гранат.</li>
+                <li>🎯 <strong>Лайфхак:</strong> Повесь ПНВ на ремень (слот для пояса) и надевай только в поле. Внутри базы или в густом лесу лучше снимать — мешают ветки.</li>
+            </ul>
+            <h3>🔹 Альтернативы ПНВ:</h3>
+            <div class="settings-grid">
+                <div class="setting-item"><span class="setting-name">💡 Налобный фонарь</span> Отлично освещает, но демаскирует. Выключай перед входом в зону ПвП.</div>
+                <div class="setting-item"><span class="setting-name">🏮 Факел + китайский фонарик</span> Ночью виден за 300 метров. Используй для отвлечения внимания.</div>
+                <div class="setting-item"><span class="setting-name">🕯️ Пламя свечей / костров</span> Создают "слепые зоны" вокруг себя — враг видит только огонь, а не тебя.</div>
+            </div>
+        </div>
+
+        <!-- КАРТОЧКА 5: ТАКТИКА И СОВЕТЫ ПРО -->
+        <div class="card">
+            <h2><span>🧠</span> Ночная тактика: как не стать жертвой</h2>
+            <p>Даже с идеальными настройками ночью важна игра головой. Топ-советы от опытных рейдеров:</p>
+            <ul style="margin-left: 1.6rem; margin-bottom: 1rem;">
+                <li>🌙 <strong>Смена гаммы монитора:</strong> В настройках самого монитора (не игры) подними черный уровень (Black Equalizer / Black Stabilizer). Это легальный аппаратный метод.</li>
+                <li>🎧 <strong>Звук важнее картинки:</strong> Ночью всегда носи наушники. Шаги по траве слышны за 40 метров. ПНВ не мешает звуку.</li>
+                <li>🚫 <strong>Не бегай с факелом по открытой местности:</strong> Ты — маяк для любого ПНВ или настроенного фильтра. Двигайся перебежками от укрытия к укрытию.</li>
+                <li>🗺️ <strong>Используй небесные ориентиры:</strong> В Rust луна и звезды освещают землю в ясные ночи. Если небо чистое — видимость выше на 40%.</li>
+            </ul>
+            <div class="warning-box">
+                🚨 <strong>Миф об "инвидиа" и автовыдаче:</strong> Никакой официальный драйвер не даст вам "рентгеновское зрение" или авто-прицел. Все упоминания "инвидиа автовыдача" — это либо названия плагинов на модded серверах, либо мошенничество. В официальном Rust за реальные читы банят навсегда.
+            </div>
+        </div>
+
+        <!-- КАРТОЧКА 6: СВОДНАЯ ТАБЛИЦА + ГАЙД В 3 ШАГА -->
+        <div class="card">
+            <h2><span>🏆</span> Гайд в 3 шага: максимальная видимость ночью</h2>
+            <div class="code-block" style="background:#0c0f14;">
+                ⚡ 1. НАСТРОЙКИ RUST: Трава = 0, Тени = 0, FXAA, глубина резкости OFF.<br>
+                ⚡ 2. NVIDIA FREESTYLE: Яркость 65-70%, контраст 45%, четкость 50%.<br>
+                ⚡ 3. ИГРОВОЙ ИНВЕНТАРЬ: ПНВ на поясе + налобный фонарь для закрытых помещений.
+            </div>
+            <p>🎯 <strong>Результат:</strong> Вы будете видеть силуэты игроков за 80 метров даже в самую темную фазу ночи. Осторожно: ваше преимущество очевидно, но опытные враги могут использовать те же настройки.</p>
+            <div class="success-box">
+                🍀 БОНУС: Автовыдача лута ночью? Нет, но есть фишка — при низких настройках травы, кусты и ягоды видны издалека благодаря контрастным текстурам. Фармите безопасно!
+            </div>
+        </div>
+
+        <!-- НАСТРОЙКИ ДЛЯ AMD / ИНТЕЛ -->
+        <div class="card">
+            <h2><span>🪟</span> Альтернатива для AMD и встроенной графики</h2>
+            <p>Владельцы видеокарт AMD Radeon могут использовать <strong>Radeon Image Sharpening</strong> и настройки цвета в Adrenalin: увеличить насыщенность и скорректировать гамму. Для встроенной графики Intel — функция "Display Power Savings" отключена, а цветность можно поднять через панель управления графикой Intel.</p>
+            <div class="code-block">
+                // Для AMD Adrenalin (пример)
+                Дисплей → Цвет: Яркость +10%, Контраст +15%, Насыщенность +20%
+                // Для встроенной Intel
+                Графические свойства → Цветокоррекция: Гамма 0.9, Контраст 55
+            </div>
+            <p>💡 <strong>Важно:</strong> Ни один из этих методов не изменяет файлы игры, поэтому EAC абсолютно спокоен.</p>
+        </div>
+
+        <hr>
+
+        <div class="footer-note">
+            🍀 Помните: честная игра — это веселая игра. Используйте легальные способы улучшить картинку, развивайте скилл и находите друзей на острове. <br>
+            <strong>RUST — выживание начинается там, где заканчивается темнота.</strong>
+        </div>
+    </div>
+
+    <script>
+        // Простая интерактивность для копирования настроек (доп. удобство)
+        const blocks = document.querySelectorAll('.code-block');
+        blocks.forEach(block => {
+            if(!block.querySelector('.copy-btn')) {
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.innerText = '📋 Скопировать';
+                btn.style.float = 'right';
+                btn.style.marginTop = '-0.2rem';
+                btn.onclick = () => {
+                    const text = block.innerText.replace('📋 Скопировать', '').trim();
+                    navigator.clipboard.writeText(text);
+                    btn.innerText = '✅ Готово!';
+                    setTimeout(() => btn.innerText = '📋 Скопировать', 1500);
+                };
+                block.style.position = 'relative';
+                block.appendChild(btn);
+            }
+        });
+    </script>
+</body>
+</html>
